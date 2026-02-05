@@ -1,0 +1,7 @@
+{
+  "name": "BOMBAbot",
+  "description": "Chatbot analisis data spatial dan atribut Balai Bomba Malaysia yang profesional dan pantas.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
