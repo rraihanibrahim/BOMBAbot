@@ -1,6 +1,6 @@
 
 import { GoogleGenAI } from "@google/genai";
-import { AssetData } from "../types";
+import { AssetData } from "./types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
