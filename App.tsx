@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { AssetData, ChatMessage } from './types';
-import { analyzeDashboardData } from './services/geminiService';
+import { analyzeDashboardData } from './geminiService';
 import { RAW_CSV_DATA } from './constants';
 
 const App: React.FC = () => {
