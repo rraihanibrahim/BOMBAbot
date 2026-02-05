@@ -2,8 +2,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { AssetData } from "./types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 const SYSTEM_INSTRUCTION = `Anda adalah "BOMBAbot", seorang pakar analisis data spatial yang profesional dan efisien. Tugas anda adalah menganalisis data Balai Bomba daripada ArcGIS FeatureServer Malaysia.
 
 Gaya Bahasa:
@@ -26,7 +24,9 @@ PENTING:
 - Fokus kepada membantu pengguna memahami taburan spatial bomba di Malaysia.`;
 
 export const analyzeDashboardData = async (data: AssetData[], query: string) => {
-  const model = "gemini-3-pro-preview";
+  // Inisialisasi di dalam fungsi untuk memastikan API_KEY ditarik dengan betul semasa runtime
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const modelName = "gemini-3-flash-preview";
   
   const stateCounts = data.reduce((acc, curr) => {
     acc[curr.location] = (acc[curr.location] || 0) + 1;
@@ -38,38 +38,49 @@ export const analyzeDashboardData = async (data: AssetData[], query: string) => 
   const totalFemale = data.reduce((acc, curr) => acc + (curr.femaleStaff || 0), 0);
   const totalCount = data.length;
 
-  const dataSamples = data.slice(0, 5).map(d => ({
+  // Ambil sampel data yang lebih relevan (10 pertama)
+  const dataSamples = data.slice(0, 10).map(d => ({
     nama: d.name,
     negeri: d.location,
     jumlah_anggota: d.capacity,
   }));
 
   const prompt = `
-STATISTIK KESELURUHAN:
-- Jumlah Besar Balai: ${totalCount}
-- Ringkasan Per Negeri: ${JSON.stringify(stateCounts)}
-- Total Anggota Nasional: ${totalMembers} (L: ${totalMale}, W: ${totalFemale})
+STATISTIK KESELURUHAN DARI DATASET:
+- Jumlah Besar Balai Bomba di Malaysia: ${totalCount}
+- Pecahan Bilangan Balai Mengikut Negeri: ${JSON.stringify(stateCounts)}
+- Jumlah Keanggotaan Nasional: ${totalMembers} (Lelaki: ${totalMale}, Wanita: ${totalFemale})
 
-SAMPEL DATA:
+SAMPEL DATA STRUKTUR:
 ${JSON.stringify(dataSamples)}
 
-Pertanyaan Pengguna:
+Soalan Pengguna:
 ${query}
   `;
 
   try {
     const response = await ai.models.generateContent({
-      model: model,
-      contents: prompt,
+      model: modelName,
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
-        temperature: 0.1,
+        temperature: 0.2,
       },
     });
 
-    return response.text || "Maaf, BOMBAbot tak dapat proses analisis tu sekarang. Cuba tanya lain kali?";
-  } catch (error) {
-    console.error("Gemini API Error:", error);
-    return "Maaf, sistem BOMBAbot mengalami sedikit gangguan teknikal. Harap bersabar ya!";
+    if (!response.text) {
+      throw new Error("Tiada respon teks dari model.");
+    }
+
+    return response.text;
+  } catch (error: any) {
+    console.error("Gemini API Error Detail:", error);
+    
+    // Memberikan maklum balas lebih spesifik jika API Key bermasalah
+    if (error.message?.includes("API_KEY")) {
+      return "Ops! Kunci API tidak dikesan. Sila pastikan API_KEY telah ditetapkan di persekitaran Vercel.";
+    }
+    
+    return "Maaf, BOMBAbot mengalami gangguan semasa menghubungi otak AI. Sila cuba sebentar lagi ya!";
   }
 };
